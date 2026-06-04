@@ -8,13 +8,6 @@ type SustainabilityScore struct {
 	Details  string
 }
 
-// ScoreThresholds defines the scoring rules.
-const (
-	maxContributorShareScore = 30 // penalise bus-factor risk
-	maxBacklogScore          = 30 // penalise old backlog
-	maxActivityScore         = 20 // reward commit activity
-	maxResponseTimeScore     = 20 // reward fast responses
-)
 
 // ComputeSustainabilityScore calculates a 0–100 score from a MetricsReport.
 func ComputeSustainabilityScore(r *RepoResult) SustainabilityScore {

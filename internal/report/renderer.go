@@ -61,13 +61,13 @@ func (r *Renderer) renderJSON(report *metrics.MetricsReport) (string, error) {
 }
 
 func (r *Renderer) renderMarkdown(report *metrics.MetricsReport) (string, error) {
-	md := fmt.Sprintf("# OpenSustain Maintainer Load Report\n\n")
-	md += fmt.Sprintf("## Activity Metrics\n")
+	md := "# OpenSustain Maintainer Load Report\n\n"
+	md += "## Activity Metrics\n"
 	md += fmt.Sprintf("- **Total Commits:** %d\n", report.TotalCommits)
 	md += fmt.Sprintf("- **Unique Contributors:** %d\n", report.UniqueContributors)
 	md += fmt.Sprintf("- **Top Contributor Share:** %.2f%%\n\n", report.TopContributorShare*100)
 	
-	md += fmt.Sprintf("## GitHub Backlog\n")
+	md += "## GitHub Backlog\n"
 	md += fmt.Sprintf("- **Open Issues:** %d\n", report.OpenIssuesCount)
 	md += fmt.Sprintf("- **Open Pull Requests:** %d\n", report.OpenPRsCount)
 	md += fmt.Sprintf("- **Median Response Time:** %s\n\n", report.MedianResponseTime.String())
