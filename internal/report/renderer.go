@@ -72,9 +72,9 @@ func (r *Renderer) renderMarkdown(report *metrics.MetricsReport) (string, error)
 	md += fmt.Sprintf("- **Open Pull Requests:** %d\n", report.OpenPRsCount)
 	md += fmt.Sprintf("- **Median Response Time:** %s\n\n", report.MedianResponseTime.String())
 	
-	md += fmt.Sprintf("### Backlog Age Buckets\n")
-	md += fmt.Sprintf("| Age | Count |\n")
-	md += fmt.Sprintf("|---|---|\n")
+	md += "### Backlog Age Buckets\n"
+	md += "| Age | Count |\n"
+	md += "|---|---|\n"
 	md += fmt.Sprintf("| 0-7 days | %d |\n", report.BacklogAgeBuckets.ZeroToSeven)
 	md += fmt.Sprintf("| 8-30 days | %d |\n", report.BacklogAgeBuckets.EightToThirty)
 	md += fmt.Sprintf("| 31-90 days | %d |\n", report.BacklogAgeBuckets.ThirtyOneToNinety)
