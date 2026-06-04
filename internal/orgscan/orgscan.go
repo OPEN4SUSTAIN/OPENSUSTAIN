@@ -1,0 +1,108 @@
+package orgscan
+
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"opensustain/internal/githubclient"
+	"opensustain/internal/metrics"
+)
+
+// RepoResult holds the scan result and sustainability score for a single repository.
+type RepoResult struct {
+	RepoName string
+	Report   *metrics.MetricsReport
+	Score    SustainabilityScore
+}
+
+// OrgMetricsReport aggregates per-repo results and an org-level score.
+type OrgMetricsReport struct {
+	OrgName              string
+	ScannedAt            time.Time
+	TotalRepos           int
+	ActiveRepos          int
+	Repos                []RepoResult
+	OrgScore             SustainabilityScore
+	HighRiskRepositories []string
+}
+
+// ScanOrg enumerates the org's repositories, filters by recent activity,
+// runs existing repo-scan logic on each, computes sustainability scores,
+// detects high-risk repos, and returns an OrgMetricsReport.
+func ScanOrg(org string, days int, token string) (*OrgMetricsReport, error) {
+	if token == "" {
+		return nil, fmt.Errorf("--token is required for org scanning")
+	}
+
+	client := githubclient.NewClient(token)
+
+	log.Printf("Fetching repositories for org: %s", org)
+	repos, err := client.FetchOrgRepos(org)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch org repos: %w", err)
+	}
+
+	cutoff := time.Now().AddDate(0, 0, -days)
+	orgReport := &OrgMetricsReport{
+		OrgName:    org,
+		ScannedAt:  time.Now(),
+		TotalRepos: len(repos),
+	}
+
+	for _, repo := range repos {
+		// Phase 2: filter repos active within the window
+		if repo.PushedAt.Before(cutoff) {
+			log.Printf("Skipping inactive repo: %s (last push: %s)", repo.FullName, repo.PushedAt.Format("2006-01-02"))
+			continue
+		}
+
+		orgReport.ActiveRepos++
+		log.Printf("Scanning repo: %s", repo.FullName)
+
+		// Remote org scan uses GitHub API only.
+		ghStats, ghErr := client.FetchStats(repo.FullName, days)
+		if ghErr != nil {
+			log.Printf("Warning: GitHub API failed for %s: %v", repo.FullName, ghErr)
+		}
+
+		repoMetrics := metrics.ComputeMetrics(nil, ghStats, time.Now())
+
+		result := RepoResult{
+			RepoName: repo.FullName,
+			Report:   repoMetrics,
+		}
+
+		// Phase 3: compute sustainability score
+		result.Score = ComputeSustainabilityScore(&result)
+
+		// Phase 4: flag high-risk repos
+		if isHighRisk(result.Score) {
+			orgReport.HighRiskRepositories = append(orgReport.HighRiskRepositories, repo.FullName)
+			log.Printf("High-risk repo detected: %s (score: %d)", repo.FullName, result.Score.Score)
+		}
+
+		orgReport.Repos = append(orgReport.Repos, result)
+	}
+
+	// Phase 3: compute org-level score (average of active repos)
+	orgReport.OrgScore = computeOrgScore(orgReport.Repos)
+
+	return orgReport, nil
+}
+
+// computeOrgScore returns an average SustainabilityScore across all repo results.
+func computeOrgScore(repos []RepoResult) SustainabilityScore {
+	if len(repos) == 0 {
+		return SustainabilityScore{Score: 0, Label: "No Data"}
+	}
+	total := 0
+	for _, r := range repos {
+		total += r.Score.Score
+	}
+	avg := total / len(repos)
+	return SustainabilityScore{
+		Score: avg,
+		Label: scoreLabel(avg),
+	}
+}

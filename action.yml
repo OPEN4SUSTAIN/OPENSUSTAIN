@@ -1,0 +1,54 @@
+name: "OpenSustain"
+description: "Generate a maintainer-load & sustainability report for a GitHub repository or organisation."
+author: "OpenSustain"
+
+branding:
+  icon: "activity"
+  color: "green"
+
+inputs:
+  mode:
+    description: "Scan mode: 'repo' or 'org'."
+    required: true
+    default: "repo"
+
+  repo:
+    description: "GitHub owner/repo to scan (required when mode=repo)."
+    required: false
+    default: ""
+
+  org:
+    description: "GitHub organisation to scan (required when mode=org)."
+    required: false
+    default: ""
+
+  days:
+    description: "Number of days of activity to include in the scan."
+    required: false
+    default: "90"
+
+  format:
+    description: "Output format: 'md' or 'json'."
+    required: false
+    default: "md"
+
+  out:
+    description: "Output file path (relative to workspace). Defaults to stdout."
+    required: false
+    default: ""
+
+  token:
+    description: "GitHub token for API access. Use secrets.GITHUB_TOKEN."
+    required: true
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - scan
+    - ${{ inputs.mode }}
+    - ${{ inputs.mode == 'repo' && format('--repo={0}', inputs.repo) || format('--org={0}', inputs.org) }}
+    - --days=${{ inputs.days }}
+    - --format=${{ inputs.format }}
+    - ${{ inputs.out != '' && format('--out={0}', inputs.out) || '' }}
+    - --token=${{ inputs.token }}

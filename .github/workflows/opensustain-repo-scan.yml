@@ -1,0 +1,51 @@
+name: OpenSustain Repo Scan
+
+on:
+  schedule:
+    # Run every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days of history to scan"
+        required: false
+        default: "90"
+
+jobs:
+  repo-scan:
+    name: Maintainer Load Report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit the report back to the repo (optional)
+      issues: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run OpenSustain repo scan
+        uses: ./                          # uses the action.yml in this repo
+        with:
+          mode: repo
+          repo: ${{ github.repository }}
+          days: ${{ inputs.days || '90' }}
+          format: md
+          out: opensustain-report.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opensustain-repo-report
+          path: opensustain-report.md
+          retention-days: 30
+
+      # Optional: commit report back to the repo
+      - name: Commit report
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add opensustain-report.md
+          git diff --cached --quiet || git commit -m "chore: update OpenSustain maintainer report [skip ci]"
+          git push

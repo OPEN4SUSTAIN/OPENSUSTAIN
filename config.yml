@@ -1,0 +1,8 @@
+# OpenSustain Sample Config
+# Example of the CLI flag equivalents
+
+repo: "./"
+days: 90
+format: "md"
+out: "report.md"
+# github_token: "YOUR_TOKEN_HERE"

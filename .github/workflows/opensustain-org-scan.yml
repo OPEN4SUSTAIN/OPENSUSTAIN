@@ -1,0 +1,54 @@
+name: OpenSustain Org Scan
+
+on:
+  schedule:
+    # Run every Monday at 09:00 UTC (offset from repo scan)
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      org:
+        description: "GitHub organisation to scan"
+        required: true
+        default: ""
+      days:
+        description: "Days of history to scan"
+        required: false
+        default: "90"
+
+jobs:
+  org-scan:
+    name: Org Sustainability Report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run OpenSustain org scan
+        uses: ./                          # uses the action.yml in this repo
+        with:
+          mode: org
+          org: ${{ inputs.org || github.repository_owner }}
+          days: ${{ inputs.days || '90' }}
+          format: md
+          out: opensustain-org-report.md
+          token: ${{ secrets.ORG_SCAN_TOKEN }}  # needs read:org scope
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opensustain-org-report
+          path: opensustain-org-report.md
+          retention-days: 30
+
+      # Optional: commit report back to the repo
+      - name: Commit org report
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add opensustain-org-report.md
+          git diff --cached --quiet || git commit -m "chore: update OpenSustain org sustainability report [skip ci]"
+          git push
