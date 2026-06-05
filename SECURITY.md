@@ -15,7 +15,7 @@ If you discover a security vulnerability in OpenSustain, please report it respon
 
 **Do NOT** open a public issue for security vulnerabilities.
 
-Instead, please send an email to: security@opensustain.org
+Instead, please send an email to: demiserular@gmail.com
 
 Include the following information in your report:
 - Description of the vulnerability
