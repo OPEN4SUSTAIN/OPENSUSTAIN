@@ -85,7 +85,11 @@ func scanRepoCmd() {
 	local := scanRepoFlags.Bool("local", false, "Use local git repository data for deep analysis")
 	token := scanRepoFlags.String("token", "", "GitHub token for API access (optional)")
 
-	scanRepoFlags.Parse(os.Args[3:])
+	if err := scanRepoFlags.Parse(os.Args[3:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		scanRepoFlags.Usage()
+		os.Exit(1)
+	}
 
 	if *repo == "" {
 		fmt.Fprintf(os.Stderr, "Error: the --repo flag is required.\n")
@@ -170,7 +174,11 @@ func scanOrgCmd() {
 	out := scanOrgFlags.String("out", "", "Output file path (default is stdout)")
 	token := scanOrgFlags.String("token", "", "GitHub token for API access (optional)")
 
-	scanOrgFlags.Parse(os.Args[3:])
+	if err := scanOrgFlags.Parse(os.Args[3:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		scanOrgFlags.Usage()
+		os.Exit(1)
+	}
 
 	if *org == "" {
 		fmt.Fprintf(os.Stderr, "Error: the --org flag is required.\n")
