@@ -10,7 +10,7 @@
 *.test
 *.out
 coverage/
-OpenSustain
+/OpenSustain
 
 # Go workspace
 go.work
