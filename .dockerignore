@@ -1,0 +1,27 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Documentation
+docs/
+Summary/
+*.md
+!README.md
+
+# Editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Test files
+testdata/
+coverage/
+
+# Build artifacts (keep local binary out of docker context)
+OpenSustain
+/bin/
+/dist/
+/build/
