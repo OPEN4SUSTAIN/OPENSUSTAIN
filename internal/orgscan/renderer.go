@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 )
@@ -43,7 +44,11 @@ func (r *OrgRenderer) Render(report *OrgMetricsReport) error {
 		if err != nil {
 			return fmt.Errorf("failed to open output file: %w", err)
 		}
-		defer file.Close()
+		defer func() {
+			if err := file.Close(); err != nil {
+				log.Printf("Warning: failed to close output file: %v", err)
+			}
+		}()
 		writer = file
 	}
 

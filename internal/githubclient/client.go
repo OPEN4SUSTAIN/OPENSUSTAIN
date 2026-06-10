@@ -37,7 +37,9 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		if resp.StatusCode == http.StatusTooManyRequests ||
 			(resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-RateLimit-Remaining") == "0") {
 
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("Warning: failed to close response body: %v", err)
+			}
 			resetAt := parseRateLimitReset(resp.Header.Get("X-RateLimit-Reset"))
 			waitDur := time.Until(resetAt) + 2*time.Second // small buffer
 			if waitDur < 0 {
@@ -179,7 +181,11 @@ func (c *Client) fetchCommitSummary(ownerRepo string, days int) (*commitSummary,
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("Warning: failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("github api returned status: %d", resp.StatusCode)
