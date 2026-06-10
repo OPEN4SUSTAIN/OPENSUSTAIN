@@ -256,7 +256,11 @@ func (c *Client) fetchIssueStats(ownerRepo string) (*issueStats, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Warning: failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("github api returned status: %d", resp.StatusCode)
@@ -301,7 +305,11 @@ func (c *Client) fetchFirstResponseTime(ownerRepo string, issueNumber int, creat
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Warning: failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
@@ -341,7 +349,11 @@ func (c *Client) FetchOrgRepos(org string) ([]Repo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch repos: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Warning: failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("github api returned status: %d", resp.StatusCode)
