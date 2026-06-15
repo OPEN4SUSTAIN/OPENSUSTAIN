@@ -1,11 +1,14 @@
 package githubclient
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -25,12 +28,24 @@ func NewClient(token string) *Client {
 
 // doRequest executes an HTTP request and automatically handles GitHub API
 // rate limiting by sleeping until the reset window if the limit is exhausted.
-func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
+func (c *Client) doRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
 	const maxRetries = 3
+	startTime := time.Now()
+
 	for attempt := 0; attempt < maxRetries; attempt++ {
+		req = req.WithContext(ctx)
 		resp, err := c.HTTPClient.Do(req)
 		if err != nil {
 			return nil, err
+		}
+
+		// Log API metrics
+		duration := time.Since(startTime)
+		remaining := resp.Header.Get("X-RateLimit-Remaining")
+		limit := resp.Header.Get("X-RateLimit-Limit")
+		if remaining != "" && limit != "" {
+			log.Printf("API request: %s %s | Status: %d | Duration: %v | Rate Limit: %s/%s remaining",
+				req.Method, req.URL.Path, resp.StatusCode, duration.Round(time.Millisecond), remaining, limit)
 		}
 
 		// 429 Too Many Requests or 403 with rate-limit exhausted
@@ -45,14 +60,41 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 			if waitDur < 0 {
 				waitDur = 10 * time.Second
 			}
+
+			// Add exponential backoff with jitter
+			backoff := calculateBackoff(attempt)
+			if backoff < waitDur {
+				waitDur = backoff
+			}
+
 			log.Printf("GitHub rate limit hit; sleeping %s until reset (attempt %d/%d)", waitDur.Round(time.Second), attempt+1, maxRetries)
-			time.Sleep(waitDur)
+			select {
+			case <-time.After(waitDur):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 			continue
 		}
 
 		return resp, nil
 	}
 	return nil, fmt.Errorf("GitHub API rate limit exhausted after %d retries", maxRetries)
+}
+
+// calculateBackoff implements exponential backoff with jitter
+func calculateBackoff(attempt int) time.Duration {
+	baseDelay := time.Second
+	maxDelay := 30 * time.Second
+
+	// Exponential backoff: 2^attempt * baseDelay
+	delay := baseDelay * time.Duration(1<<uint(attempt))
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+
+	// Add jitter: random value between 0.5x and 1.5x of delay
+	jitter := time.Duration(float64(delay) * (0.5 + rand.Float64()))
+	return jitter
 }
 
 // parseRateLimitReset parses the X-RateLimit-Reset Unix timestamp header.
@@ -99,7 +141,7 @@ type Repo struct {
 }
 
 // FetchStats queries the GitHub API for commits, issues, and PRs in the given owner/repo.
-func (c *Client) FetchStats(ownerRepo string, days int) (*GitHubStats, error) {
+func (c *Client) FetchStats(ctx context.Context, ownerRepo string, days int) (*GitHubStats, error) {
 	if c.Token == "" {
 		// Gracefully skip if no token is provided
 		return nil, nil
@@ -107,7 +149,7 @@ func (c *Client) FetchStats(ownerRepo string, days int) (*GitHubStats, error) {
 
 	stats := &GitHubStats{}
 
-	commitStats, err := c.fetchCommitSummary(ownerRepo, days)
+	commitStats, err := c.fetchCommitSummary(ctx, ownerRepo, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch commits: %w", err)
 	}
@@ -115,7 +157,7 @@ func (c *Client) FetchStats(ownerRepo string, days int) (*GitHubStats, error) {
 	stats.UniqueContributors = commitStats.UniqueContributors
 	stats.TopContributorShare = commitStats.TopContributorShare
 
-	issueStats, err := c.fetchIssueStats(ownerRepo)
+	issueStats, err := c.fetchIssueStats(ctx, ownerRepo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch issues: %w", err)
 	}
@@ -162,7 +204,7 @@ type commitSummary struct {
 	TopContributorShare float64
 }
 
-func (c *Client) fetchCommitSummary(ownerRepo string, days int) (*commitSummary, error) {
+func (c *Client) fetchCommitSummary(ctx context.Context, ownerRepo string, days int) (*commitSummary, error) {
 	since := time.Now().AddDate(0, 0, -days).Format(time.RFC3339)
 	authorCounts := make(map[string]int)
 	commitCount := 0
@@ -177,7 +219,7 @@ func (c *Client) fetchCommitSummary(ownerRepo string, days int) (*commitSummary,
 		req.Header.Set("Authorization", "Bearer "+c.Token)
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-		resp, err := c.doRequest(req)
+		resp, err := c.doRequest(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -242,7 +284,7 @@ type issueStats struct {
 	PRResponseTimes    []time.Duration
 }
 
-func (c *Client) fetchIssueStats(ownerRepo string) (*issueStats, error) {
+func (c *Client) fetchIssueStats(ctx context.Context, ownerRepo string) (*issueStats, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=open&per_page=100", ownerRepo)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -252,7 +294,7 @@ func (c *Client) fetchIssueStats(ownerRepo string) (*issueStats, error) {
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	resp, err := c.doRequest(req)
+	resp, err := c.doRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -271,27 +313,49 @@ func (c *Client) fetchIssueStats(ownerRepo string) (*issueStats, error) {
 		return nil, fmt.Errorf("failed to parse issues: %w", err)
 	}
 
-	stats := &issueStats{}
-	for _, issue := range issues {
-		if issue.PullRequest != nil {
-			stats.OpenPRsCount++
-			if duration, err := c.fetchFirstResponseTime(ownerRepo, issue.Number, issue.CreatedAt); err == nil && duration != nil {
-				stats.PRResponseTimes = append(stats.PRResponseTimes, *duration)
-			}
-		} else {
-			stats.OpenIssuesCount++
-			if duration, err := c.fetchFirstResponseTime(ownerRepo, issue.Number, issue.CreatedAt); err == nil && duration != nil {
-				stats.IssueResponseTimes = append(stats.IssueResponseTimes, *duration)
-			}
-		}
-		stats.IssueCreationDates = append(stats.IssueCreationDates, issue.CreatedAt)
+	stats := &issueStats{
+		IssueCreationDates: make([]time.Time, 0, len(issues)),
 	}
 
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 5)
+
+	for _, issue := range issues {
+		wg.Add(1)
+		go func(is Issue) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			mu.Lock()
+			if is.PullRequest != nil {
+				stats.OpenPRsCount++
+			} else {
+				stats.OpenIssuesCount++
+			}
+			stats.IssueCreationDates = append(stats.IssueCreationDates, is.CreatedAt)
+			mu.Unlock()
+
+			duration, err := c.fetchFirstResponseTime(ctx, ownerRepo, is.Number, is.CreatedAt)
+			if err == nil && duration != nil {
+				mu.Lock()
+				if is.PullRequest != nil {
+					stats.PRResponseTimes = append(stats.PRResponseTimes, *duration)
+				} else {
+					stats.IssueResponseTimes = append(stats.IssueResponseTimes, *duration)
+				}
+				mu.Unlock()
+			}
+		}(issue)
+	}
+
+	wg.Wait()
 	return stats, nil
 }
 
 // fetchFirstResponseTime makes an extra API call to get the first comment for an issue/PR
-func (c *Client) fetchFirstResponseTime(ownerRepo string, issueNumber int, createdAt time.Time) (*time.Duration, error) {
+func (c *Client) fetchFirstResponseTime(ctx context.Context, ownerRepo string, issueNumber int, createdAt time.Time) (*time.Duration, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d/comments?per_page=1", ownerRepo, issueNumber)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -301,7 +365,7 @@ func (c *Client) fetchFirstResponseTime(ownerRepo string, issueNumber int, creat
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	resp, err := c.doRequest(req)
+	resp, err := c.doRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -329,40 +393,50 @@ func (c *Client) fetchFirstResponseTime(ownerRepo string, issueNumber int, creat
 }
 
 // FetchOrgRepos queries the GitHub API for repositories in the given org
-func (c *Client) FetchOrgRepos(org string) ([]Repo, error) {
+func (c *Client) FetchOrgRepos(ctx context.Context, org string) ([]Repo, error) {
 	if c.Token == "" {
 		return nil, fmt.Errorf("GitHub token is required to fetch org repos")
 	}
 
-	// In a real app we'd want pagination. For simplicity, we just fetch the first page of 100.
-	url := fmt.Sprintf("https://api.github.com/orgs/%s/repos?per_page=100&sort=pushed", org)
+	var allRepos []Repo
+	page := 1
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := c.doRequest(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch repos: %w", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("Warning: failed to close response body: %v", err)
+	for {
+		url := fmt.Sprintf("https://api.github.com/orgs/%s/repos?per_page=100&sort=pushed&page=%d", org, page)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
 		}
-	}()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("github api returned status: %d", resp.StatusCode)
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+		resp, err := c.doRequest(ctx, req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch repos: %w", err)
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("Warning: failed to close response body: %v", err)
+			}
+		}()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("github api returned status: %d", resp.StatusCode)
+		}
+
+		var repos []Repo
+		if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
+			return nil, fmt.Errorf("failed to parse repos: %w", err)
+		}
+
+		allRepos = append(allRepos, repos...)
+
+		if len(repos) < 100 {
+			break
+		}
+		page++
 	}
 
-	var repos []Repo
-	if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
-		return nil, fmt.Errorf("failed to parse repos: %w", err)
-	}
-
-	return repos, nil
+	return allRepos, nil
 }

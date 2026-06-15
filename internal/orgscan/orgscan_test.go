@@ -129,7 +129,7 @@ func TestOrgRenderer_Markdown_ContainsSummary(t *testing.T) {
 		},
 	}
 
-	renderer := NewOrgRenderer("md", "")
+	renderer := NewOrgRenderer("md", "", "test-org")
 	md, err := renderer.renderMarkdown(report)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -166,7 +166,7 @@ func TestOrgRenderer_JSON_Valid(t *testing.T) {
 			},
 		},
 	}
-	renderer := NewOrgRenderer("json", "")
+	renderer := NewOrgRenderer("json", "", "json-org")
 	out, err := renderer.renderJSON(report)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

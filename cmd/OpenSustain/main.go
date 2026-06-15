@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -84,6 +85,10 @@ func scanRepoCmd() {
 	mode := scanRepoFlags.String("mode", "remote", "Scan mode: 'remote' or 'deep'")
 	local := scanRepoFlags.Bool("local", false, "Use local git repository data for deep analysis")
 	token := scanRepoFlags.String("token", "", "GitHub token for API access (optional)")
+	busFactorWeight := scanRepoFlags.Float64("bus-factor-weight", 30, "Weight for bus factor risk (default: 30)")
+	backlogAgeWeight := scanRepoFlags.Float64("backlog-age-weight", 30, "Weight for backlog age (default: 30)")
+	commitActivityWeight := scanRepoFlags.Float64("commit-activity-weight", 20, "Weight for commit activity (default: 20)")
+	responseTimeWeight := scanRepoFlags.Float64("response-time-weight", 20, "Weight for response time (default: 20)")
 
 	if err := scanRepoFlags.Parse(os.Args[3:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -132,7 +137,7 @@ func scanRepoCmd() {
 	var ghStats *githubclient.GitHubStats
 	if *token != "" {
 		client := githubclient.NewClient(*token)
-		ghStats, err = client.FetchStats(*repo, *days)
+		ghStats, err = client.FetchStats(context.Background(), *repo, *days)
 		if err != nil {
 			log.Printf("Warning: GitHub API ingestion failed: %v", err)
 		} else {
@@ -147,10 +152,16 @@ func scanRepoCmd() {
 	}
 
 	// 3. Metrics engine
-	reportData := metrics.ComputeMetrics(gitStats, ghStats, time.Now())
+	weights := metrics.ScoringWeights{
+		BusFactor:      *busFactorWeight,
+		BacklogAge:     *backlogAgeWeight,
+		CommitActivity: *commitActivityWeight,
+		ResponseTime:   *responseTimeWeight,
+	}
+	reportData := metrics.ComputeMetricsWithWeights(gitStats, ghStats, time.Now(), weights)
 
 	// 4. Report rendering
-	renderer := report.NewRenderer(*format, *out)
+	renderer := report.NewRenderer(*format, *out, *repo)
 	if err := renderer.Render(reportData); err != nil {
 		log.Fatalf("Error rendering report: %v", err)
 	}
@@ -173,6 +184,10 @@ func scanOrgCmd() {
 	format := scanOrgFlags.String("format", "md", "Output format: 'json' or 'md'")
 	out := scanOrgFlags.String("out", "", "Output file path (default is stdout)")
 	token := scanOrgFlags.String("token", "", "GitHub token for API access (optional)")
+	busFactorWeight := scanOrgFlags.Float64("bus-factor-weight", 30, "Weight for bus factor risk (default: 30)")
+	backlogAgeWeight := scanOrgFlags.Float64("backlog-age-weight", 30, "Weight for backlog age (default: 30)")
+	commitActivityWeight := scanOrgFlags.Float64("commit-activity-weight", 20, "Weight for commit activity (default: 20)")
+	responseTimeWeight := scanOrgFlags.Float64("response-time-weight", 20, "Weight for response time (default: 20)")
 
 	if err := scanOrgFlags.Parse(os.Args[3:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -193,12 +208,18 @@ func scanOrgCmd() {
 
 	log.Printf("Starting org scan for: %s (window: %d days)", *org, *days)
 
-	orgReport, err := orgscan.ScanOrg(*org, *days, *token)
+	weights := metrics.ScoringWeights{
+		BusFactor:      *busFactorWeight,
+		BacklogAge:     *backlogAgeWeight,
+		CommitActivity: *commitActivityWeight,
+		ResponseTime:   *responseTimeWeight,
+	}
+	orgReport, err := orgscan.ScanOrg(*org, *days, *token, weights)
 	if err != nil {
 		log.Fatalf("Error scanning org: %v", err)
 	}
 
-	renderer := orgscan.NewOrgRenderer(*format, *out)
+	renderer := orgscan.NewOrgRenderer(*format, *out, *org)
 	if err := renderer.Render(orgReport); err != nil {
 		log.Fatalf("Error rendering org report: %v", err)
 	}

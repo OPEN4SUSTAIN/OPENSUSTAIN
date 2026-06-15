@@ -6,18 +6,21 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // OrgRenderer renders an OrgMetricsReport in the requested format.
 type OrgRenderer struct {
 	Format string
 	Out    string
+	OrgName string
 }
 
 // NewOrgRenderer creates a new OrgRenderer.
-func NewOrgRenderer(format, out string) *OrgRenderer {
-	return &OrgRenderer{Format: format, Out: out}
+func NewOrgRenderer(format, out, orgName string) *OrgRenderer {
+	return &OrgRenderer{Format: format, Out: out, OrgName: orgName}
 }
 
 // Render writes the org report to the configured output.
@@ -39,8 +42,25 @@ func (r *OrgRenderer) Render(report *OrgMetricsReport) error {
 	}
 
 	var writer io.Writer = os.Stdout
-	if r.Out != "" {
-		file, err := os.Create(r.Out)
+	outPath := r.Out
+	if outPath == "" && r.OrgName != "" {
+		// Generate default path in reports/org-reports/
+		timestamp := time.Now().Format("20060102-150405")
+		ext := r.Format
+		if ext == "md" {
+			ext = "md"
+		}
+		outPath = filepath.Join("reports", "org-reports", fmt.Sprintf("%s-%s.%s", r.OrgName, timestamp, ext))
+		
+		// Ensure directory exists
+		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+			return fmt.Errorf("failed to create reports directory: %w", err)
+		}
+		log.Printf("Writing report to: %s", outPath)
+	}
+	
+	if outPath != "" {
+		file, err := os.Create(outPath)
 		if err != nil {
 			return fmt.Errorf("failed to open output file: %w", err)
 		}

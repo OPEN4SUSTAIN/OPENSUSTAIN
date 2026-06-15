@@ -30,3 +30,6 @@ go.work.sum
 docs/
 Summary/
 
+# Generated reports
+reports/
+

@@ -1,6 +1,7 @@
 package orgscan
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -30,15 +31,16 @@ type OrgMetricsReport struct {
 // ScanOrg enumerates the org's repositories, filters by recent activity,
 // runs existing repo-scan logic on each, computes sustainability scores,
 // detects high-risk repos, and returns an OrgMetricsReport.
-func ScanOrg(org string, days int, token string) (*OrgMetricsReport, error) {
+func ScanOrg(org string, days int, token string, weights metrics.ScoringWeights) (*OrgMetricsReport, error) {
 	if token == "" {
 		return nil, fmt.Errorf("--token is required for org scanning")
 	}
 
 	client := githubclient.NewClient(token)
+	ctx := context.Background()
 
 	log.Printf("Fetching repositories for org: %s", org)
-	repos, err := client.FetchOrgRepos(org)
+	repos, err := client.FetchOrgRepos(ctx, org)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch org repos: %w", err)
 	}
@@ -50,7 +52,8 @@ func ScanOrg(org string, days int, token string) (*OrgMetricsReport, error) {
 		TotalRepos: len(repos),
 	}
 
-	for _, repo := range repos {
+	totalRepos := len(repos)
+	for i, repo := range repos {
 		// Phase 2: filter repos active within the window
 		if repo.PushedAt.Before(cutoff) {
 			log.Printf("Skipping inactive repo: %s (last push: %s)", repo.FullName, repo.PushedAt.Format("2006-01-02"))
@@ -58,15 +61,15 @@ func ScanOrg(org string, days int, token string) (*OrgMetricsReport, error) {
 		}
 
 		orgReport.ActiveRepos++
-		log.Printf("Scanning repo: %s", repo.FullName)
+		log.Printf("Scanning repo [%d/%d]: %s", i+1, totalRepos, repo.FullName)
 
 		// Remote org scan uses GitHub API only.
-		ghStats, ghErr := client.FetchStats(repo.FullName, days)
+		ghStats, ghErr := client.FetchStats(ctx, repo.FullName, days)
 		if ghErr != nil {
 			log.Printf("Warning: GitHub API failed for %s: %v", repo.FullName, ghErr)
 		}
 
-		repoMetrics := metrics.ComputeMetrics(nil, ghStats, time.Now())
+		repoMetrics := metrics.ComputeMetricsWithWeights(nil, ghStats, time.Now(), weights)
 
 		result := RepoResult{
 			RepoName: repo.FullName,

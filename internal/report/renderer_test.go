@@ -10,7 +10,7 @@ import (
 )
 
 func TestRenderJSON(t *testing.T) {
-	r := NewRenderer("json", "")
+	r := NewRenderer("json", "", "test-repo")
 	report := &metrics.MetricsReport{
 		TotalCommits:       100,
 		UniqueContributors: 5,
@@ -34,7 +34,7 @@ func TestRenderJSON(t *testing.T) {
 }
 
 func TestRenderMarkdown(t *testing.T) {
-	r := NewRenderer("md", "")
+	r := NewRenderer("md", "", "test-repo")
 	report := &metrics.MetricsReport{
 		TotalCommits:       100,
 		TopContributorShare: 0.75,

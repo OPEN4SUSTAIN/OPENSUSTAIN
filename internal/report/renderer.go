@@ -6,6 +6,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"opensustain/internal/metrics"
 )
@@ -13,12 +16,14 @@ import (
 type Renderer struct {
 	Format string
 	Out    string
+	RepoName string
 }
 
-func NewRenderer(format, out string) *Renderer {
+func NewRenderer(format, out, repoName string) *Renderer {
 	return &Renderer{
-		Format: format,
-		Out:    out,
+		Format:   format,
+		Out:      out,
+		RepoName: repoName,
 	}
 }
 
@@ -40,8 +45,26 @@ func (r *Renderer) Render(report *metrics.MetricsReport) error {
 	}
 
 	var writer io.Writer = os.Stdout
-	if r.Out != "" {
-		file, err := os.Create(r.Out)
+	outPath := r.Out
+	if outPath == "" && r.RepoName != "" {
+		// Generate default path in reports/repo-reports/
+		sanitizedName := strings.ReplaceAll(r.RepoName, "/", "-")
+		timestamp := time.Now().Format("20060102-150405")
+		ext := r.Format
+		if ext == "md" {
+			ext = "md"
+		}
+		outPath = filepath.Join("reports", "repo-reports", fmt.Sprintf("%s-%s.%s", sanitizedName, timestamp, ext))
+		
+		// Ensure directory exists
+		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+			return fmt.Errorf("failed to create reports directory: %w", err)
+		}
+		log.Printf("Writing report to: %s", outPath)
+	}
+	
+	if outPath != "" {
+		file, err := os.Create(outPath)
 		if err != nil {
 			return fmt.Errorf("failed to open output file: %w", err)
 		}

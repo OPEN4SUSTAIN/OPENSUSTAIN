@@ -33,7 +33,7 @@ Scans a repository to generate a maintainer load report in either JSON or Markdo
 - `--repo` **(Required)**: Path to a local repository (e.g., `./`) or a remote GitHub owner/repo identifier (e.g., `kubernetes/kubernetes`).
 - `--days`: Number of days to scan for activity backwards from today. Defaults to `90`.
 - `--format`: The output format of the report. Must be `'md'` (Markdown) or `'json'`. Defaults to `md`.
-- `--out`: Output file path. If omitted, the report is printed directly to `stdout`.
+- `--out`: Output file path. If omitted, the report is automatically saved to `reports/repo-reports/{repo-name}-{timestamp}.{format}`.
 - `--local`: Optional flag to enable deep analysis using local git history. Use this when scanning a local repository path.
 - `--mode`: Optional scan mode. Use `remote` for GitHub API-only scans or `deep` for local git analysis.
 - `--token`: GitHub Personal Access Token (PAT). Used to authenticate with the GitHub API to pull Issue and PR statistics and to run remote GitHub-only scans.
@@ -48,14 +48,14 @@ Scans an entire GitHub organization and aggregates metrics across active reposit
 
 **Basic Usage:**
 ```bash
-./OpenSustain scan org --org <organization> --days 90 --format md --out org-report.md --token "$GITHUB_TOKEN"
+./OpenSustain scan org --org <organization> --days 90 --format md --token "$GITHUB_TOKEN"
 ```
 
 **Available Flags:**
 - `--org` **(Required)**: GitHub organization name to scan.
 - `--days`: Number of days to scan for repo activity. Defaults to `90`.
 - `--format`: The output format of the report. Must be `'md'` or `'json'`. Defaults to `md`.
-- `--out`: Output file path. If omitted, the report is printed directly to `stdout`.
+- `--out`: Output file path. If omitted, the report is automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
 - `--token`: GitHub token for API access. Required for organization scans.
 
 ---
@@ -65,6 +65,12 @@ Scans an entire GitHub organization and aggregates metrics across active reposit
 ### 1. Local Repository Scan
 
 To scan the local repository and output a markdown report to `local_report.md`:
+
+```bash
+./OpenSustain scan repo --repo ./ --days 90 --format md
+```
+
+This will save the report to `reports/repo-repos/{timestamp}.md`. If you want to specify a custom path, use `--out`:
 
 ```bash
 ./OpenSustain scan repo --repo ./ --days 90 --format md --out local_report.md
@@ -85,8 +91,10 @@ To scan a GitHub repository and include issue and PR backlog details:
 To scan all active repositories in a GitHub organization and generate an aggregated org report:
 
 ```bash
-./OpenSustain scan org --org my-github-org --days 90 --format md --out org-report.md --token "$GITHUB_TOKEN"
+./OpenSustain scan org --org my-github-org --days 90 --format md --token "$GITHUB_TOKEN"
 ```
+
+If `--out` is omitted, the report is automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
 
 ---
 

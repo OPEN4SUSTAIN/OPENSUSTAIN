@@ -22,6 +22,9 @@ go build -o OpenSustain ./cmd/OpenSustain
 # Local repo — markdown report to stdout
 ./OpenSustain scan repo --repo ./myrepo --days 90 --format md
 
+# Local repo — markdown report saved to reports/repo-reports/
+./OpenSustain scan repo --repo ./myrepo --days 90 --format md
+
 # Remote GitHub repo — JSON report to file (requires token for issues/PRs)
 ./OpenSustain scan repo \
   --repo owner/repo \
@@ -41,9 +44,10 @@ go build -o OpenSustain ./cmd/OpenSustain
   --org my-github-org \
   --days 90 \
   --format md \
-  --out org-report.md \
   --token "$GITHUB_TOKEN"
 ```
+
+If `--out` is omitted, reports are automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
 
 > **Note:** The `--token` flag is required for org scanning. The token needs `read:org` and `repo` scopes.
 
@@ -90,7 +94,7 @@ Add OpenSustain to any workflow in `.github/workflows/`.
 | `org`   | if mode=org | — | GitHub organisation name |
 | `days`  | No | `90` | Activity window in days |
 | `format`| No | `md` | `md` or `json` |
-| `out`   | No | stdout | Output file path |
+| `out`   | No | reports/ folder | Output file path (defaults to reports/repo-reports/ or reports/org-repos/ with timestamp) |
 | `token` | Yes | — | GitHub token |
 
 ### Outputs

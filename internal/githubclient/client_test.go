@@ -1,6 +1,7 @@
 package githubclient
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 )
@@ -55,8 +56,8 @@ func TestParseIssuesResponse(t *testing.T) {
 
 func TestFetchStatsGracefulSkip(t *testing.T) {
 	client := NewClient("") // Empty token
-	stats, err := client.FetchStats("owner/repo", 90)
-	
+	stats, err := client.FetchStats(context.Background(), "owner/repo", 90)
+
 	if err != nil {
 		t.Fatalf("expected no error when token is empty, got %v", err)
 	}
