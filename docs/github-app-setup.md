@@ -9,10 +9,12 @@ For large organizations, GitHub App authentication provides significantly higher
 
 ## Why Use GitHub App Authentication?
 
-- **83x higher rate limits** (5,000/hour vs 60/hour)
-- **Better suited for enterprise organizations**
-- **More secure than sharing PATs**
-- **Centralized app management**
+<ul class="feature-list">
+  <li><strong>83x higher rate limits</strong> (5,000/hour vs 60/hour)</li>
+  <li><strong>Better suited for enterprise organizations</strong></li>
+  <li><strong>More secure than sharing PATs</strong></li>
+  <li><strong>Centralized app management</strong></li>
+</ul>
 
 ## Setting up a GitHub App
 
@@ -27,12 +29,18 @@ For large organizations, GitHub App authentication provides significantly higher
 ### 2. Configure Permissions
 
 **Repository permissions** (set to Read access):
-- **Contents**: Read
-- **Issues**: Read
-- **Pull requests**: Read
+
+<ul class="feature-list">
+  <li><strong>Contents</strong>: Read</li>
+  <li><strong>Issues</strong>: Read</li>
+  <li><strong>Pull requests</strong>: Read</li>
+</ul>
 
 **Organization permissions** (set to Read access):
-- **Administration**: Read (to list installations)
+
+<ul class="feature-list">
+  <li><strong>Administration</strong>: Read (to list installations)</li>
+</ul>
 
 ### 3. Generate Private Key
 
@@ -65,22 +73,33 @@ For large organizations, GitHub App authentication provides significantly higher
 
 ## Security Notes
 
-- Keep your private key file secure and never commit it to version control
-- The private key should have restricted file permissions (chmod 600)
-- Rotate your private key if it's ever compromised
-- Only grant the minimum required permissions
+<ul class="feature-list">
+  <li>Keep your private key file secure and never commit it to version control</li>
+  <li>The private key should have restricted file permissions (chmod 600)</li>
+  <li>Rotate your private key if it's ever compromised</li>
+  <li>Only grant the minimum required permissions</li>
+</ul>
 
 ## Troubleshooting
 
 **Error: "failed to read private key"**
-- Ensure the private key file path is correct
-- Check file permissions on the private key file
+
+<ul class="feature-list">
+  <li>Ensure the private key file path is correct</li>
+  <li>Check file permissions on the private key file</li>
+</ul>
 
 **Error: "no installation found for organization"**
-- Ensure the GitHub App is installed on the target organization
-- Check that the organization name is correct
+
+<ul class="feature-list">
+  <li>Ensure the GitHub App is installed on the target organization</li>
+  <li>Check that the organization name is correct</li>
+</ul>
 
 **Error: "failed to get installation token"**
-- Verify the App has the correct permissions
-- Check that the App is not rate-limited
-- Ensure the private key is valid and not expired
+
+<ul class="feature-list">
+  <li>Verify the App has the correct permissions</li>
+  <li>Check that the App is not rate-limited</li>
+  <li>Ensure the private key is valid and not expired</li>
+</ul>

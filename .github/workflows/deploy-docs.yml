@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd docs
-          gem install jekyll jekyll-seo-tag jekyll-sitemap jekyll-theme-cayman
+          gem install jekyll jekyll-seo-tag jekyll-sitemap
 
       - name: Build site
         run: |

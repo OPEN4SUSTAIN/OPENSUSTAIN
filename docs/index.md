@@ -1,22 +1,20 @@
 ---
-layout: default
+layout: home
 title: OpenSustain
 ---
 
-# OpenSustain
-
-The most comprehensive open source sustainability and maintainer-load analysis tool.
-
 ## Features
 
-- **Bus Factor Analysis** – Top contributor share scoring
-- **Backlog Aging** – 4 age buckets (0–7, 8–30, 31–90, 90+ days)
-- **Response Time Tracking** – Median time to first comment
-- **Unified Sustainability Score** – 0–100 single score
-- **High-Risk Auto-Detection** – Automatic flagging
-- **Org-Level Aggregation** – Scan entire orgs in one command
-- **Local Git Analysis** – Deep mode with git log
-- **GitHub API Integration** – Issues, PRs, response times
+<ul class="feature-list">
+  <li><strong>Bus Factor Analysis</strong> – Top contributor share scoring</li>
+  <li><strong>Backlog Aging</strong> – 4 age buckets (0–7, 8–30, 31–90, 90+ days)</li>
+  <li><strong>Response Time Tracking</strong> – Median time to first comment</li>
+  <li><strong>Unified Sustainability Score</strong> – 0–100 single score</li>
+  <li><strong>High-Risk Auto-Detection</strong> – Automatic flagging</li>
+  <li><strong>Org-Level Aggregation</strong> – Scan entire orgs in one command</li>
+  <li><strong>Local Git Analysis</strong> – Deep mode with git log</li>
+  <li><strong>GitHub API Integration</strong> – Issues, PRs, response times</li>
+</ul>
 
 ## Quick Start
 

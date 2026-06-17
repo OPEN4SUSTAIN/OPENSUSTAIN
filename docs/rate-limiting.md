@@ -10,11 +10,14 @@ OpenSustain provides several strategies to reduce GitHub API calls when scanning
 ## The Problem
 
 GitHub API rate limits can be a bottleneck when scanning organizations with many repositories:
-- Each repo requires multiple API calls (commits, issues, PRs, comments)
-- Response time fetching makes 1 extra API call per issue/PR
-- Large backlogs (1000+ issues) hit rate limits immediately
-- PAT rate limit: 60 requests/hour
-- GitHub App rate limit: 5,000 requests/hour
+
+<ul class="feature-list">
+  <li>Each repo requires multiple API calls (commits, issues, PRs, comments)</li>
+  <li>Response time fetching makes 1 extra API call per issue/PR</li>
+  <li>Large backlogs (1000+ issues) hit rate limits immediately</li>
+  <li>PAT rate limit: 60 requests/hour</li>
+  <li>GitHub App rate limit: 5,000 requests/hour</li>
+</ul>
 
 ## Solution: Configurable Rate Limiting Strategies
 
@@ -93,13 +96,22 @@ You can combine multiple strategies for maximum efficiency:
 ## Recommendations
 
 **Small Organizations (< 50 repos):**
-- Use PAT authentication
-- No rate limiting optimization needed
+
+<ul class="feature-list">
+  <li>Use PAT authentication</li>
+  <li>No rate limiting optimization needed</li>
+</ul>
 
 **Medium Organizations (50-100 repos):**
-- Use PAT authentication
-- Add `--sample-rate 0.5` for moderate savings
+
+<ul class="feature-list">
+  <li>Use PAT authentication</li>
+  <li>Add <code>--sample-rate 0.5</code> for moderate savings</li>
+</ul>
 
 **Large Organizations (100+ repos):**
-- Use GitHub App authentication
-- Add `--sample-rate 0.3` and `--recent-only` for optimal performance
+
+<ul class="feature-list">
+  <li>Use GitHub App authentication</li>
+  <li>Add <code>--sample-rate 0.3</code> and <code>--recent-only</code> for optimal performance</li>
+</ul>
