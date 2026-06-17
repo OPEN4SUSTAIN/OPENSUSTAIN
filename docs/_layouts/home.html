@@ -2,21 +2,15 @@
 layout: default
 ---
 
-<div class="hero-section">
-  <div class="container">
-    <h1 class="hero-title">{{ site.title }}</h1>
-    <p class="hero-subtitle">{{ site.description }}</p>
-    <div class="hero-buttons">
-      <a href="{{ '/documentation.html' | relative_url }}" class="btn btn-primary btn-lg">Get Started</a>
-      <a href="{{ site.github.repository_url }}" class="btn btn-outline-light btn-lg">View on GitHub</a>
-    </div>
+<div class="hero">
+  <h1>{{ site.title }}</h1>
+  <p>{{ site.description }}</p>
+  <div class="hero-actions">
+    <a href="{{ '/documentation' | relative_url }}" class="btn btn-primary">Get Started</a>
+    <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
   </div>
 </div>
 
-<div class="container">
-  <div class="row">
-    <div class="col-lg-8 mx-auto">
-      {{ content }}
-    </div>
-  </div>
+<div class="content">
+  {{ content }}
 </div>

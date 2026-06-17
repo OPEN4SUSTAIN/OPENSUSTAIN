@@ -59,14 +59,14 @@ For enterprise organizations with 100+ repositories, use GitHub App authenticati
 ./OpenSustain scan org --org my-org --days 90 --app-id 123456 --private-key-path /path/to/private-key.pem
 ```
 
-See [GitHub App Setup](./github-app-setup/) for detailed instructions.
+See [GitHub App Setup]({{ '/github-app-setup' | relative_url }}) for detailed instructions.
 
 ## Documentation
 
-- [Full Documentation](./documentation/)
-- [GitHub App Setup Guide](./github-app-setup/)
-- [Rate Limiting Optimization](./rate-limiting/)
-- [Features Overview](./features/)
+- [Full Documentation]({{ '/documentation' | relative_url }})
+- [GitHub App Setup Guide]({{ '/github-app-setup' | relative_url }})
+- [Rate Limiting Optimization]({{ '/rate-limiting' | relative_url }})
+- [Features Overview]({{ '/features' | relative_url }}) <span class="badge">Coming Soon</span>
 
 ## License
 
