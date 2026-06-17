@@ -59,7 +59,9 @@ Scans an entire GitHub organization and aggregates metrics across active reposit
 - `--days`: Number of days to scan for repo activity. Defaults to `90`.
 - `--format`: The output format of the report. Must be `'md'` or `'json'`. Defaults to `md`.
 - `--out`: Output file path. If omitted, the report is automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
-- `--token`: GitHub token for API access. Required for organization scans.
+- `--token`: GitHub token for API access. Required for organization scans (unless using GitHub App authentication).
+- `--app-id`: GitHub App ID for App authentication (higher rate limits: 5,000/hour vs 60/hour for PATs).
+- `--private-key-path`: Path to GitHub App private key PEM file. Required when using --app-id.
 - `--skip-response-time`: Skip response time fetching to reduce GitHub API calls. Useful for large backlogs or rate-limited scenarios.
 - `--sample-rate`: Sample rate for response time fetching (0.0-1.0, default 1.0 = all). Reduces API calls by only fetching response times for a percentage of issues.
 - `--recent-only`: Only fetch response times for issues within the scan window. Eliminates API calls for stale issues.
@@ -98,6 +100,13 @@ To scan all active repositories in a GitHub organization and generate an aggrega
 
 ```bash
 ./OpenSustain scan org --org my-github-org --days 90 --format md --token "$GITHUB_TOKEN"
+```
+
+**GitHub App Authentication** (recommended for large organizations):
+
+```bash
+# Use GitHub App for higher rate limits (5,000/hour vs 60/hour for PATs)
+./OpenSustain scan org --org my-github-org --days 90 --app-id 123456 --private-key-path /path/to/private-key.pem
 ```
 
 To reduce GitHub API calls for large organizations:
@@ -179,3 +188,49 @@ OpenSustain can also run as a reusable GitHub Action using the included `action.
 ```
 
 The Action builds the CLI in Docker and forwards the selected scan arguments to the executable.
+
+---
+
+## GitHub App Authentication Setup
+
+For large organizations, GitHub App authentication provides significantly higher rate limits (5,000 requests/hour vs 60/hour for PATs).
+
+### Setting up a GitHub App
+
+1. **Create a GitHub App:**
+   - Go to GitHub Settings → Developer settings → GitHub Apps → New GitHub App
+   - Give it a name (e.g., "OpenSustain Scanner")
+   - Set Homepage URL to your project URL
+   - Uncheck "Webhook" (not needed for this use case)
+
+2. **Configure Permissions:**
+   - Repository permissions: `Contents: Read`, `Issues: Read`, `Pull requests: Read`
+   - Organization permissions: `Administration: Read` (to list installations)
+
+3. **Generate Private Key:**
+   - In the GitHub App settings, scroll to "Private keys"
+   - Click "Generate a private key"
+   - Download the `.pem` file and keep it secure
+
+4. **Install the App:**
+   - Click "Install App" in the GitHub App settings
+   - Select the organizations you want to scan
+   - Note the App ID from the GitHub App settings page
+
+### Using GitHub App Authentication
+
+```bash
+./OpenSustain scan org \
+  --org my-github-org \
+  --days 90 \
+  --app-id 123456 \
+  --private-key-path /path/to/private-key.pem
+```
+
+**Benefits:**
+- 83x higher rate limits (5,000/hour vs 60/hour)
+- Better suited for enterprise organizations
+- More secure than sharing PATs
+- Centralized app management
+
+**Note:** The GitHub App must be installed on the target organization before scanning.

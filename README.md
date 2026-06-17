@@ -47,6 +47,13 @@ go build -o OpenSustain ./cmd/OpenSustain
   --token "$GITHUB_TOKEN"
 ```
 
+**GitHub App Authentication** (recommended for large organizations):
+
+```bash
+# Use GitHub App for higher rate limits (5,000/hour vs 60/hour for PATs)
+./OpenSustain scan org --org my-github-org --days 90 --app-id 123456 --private-key-path /path/to/private-key.pem
+```
+
 **Rate Limiting Optimization** (for large organizations):
 
 ```bash
@@ -62,7 +69,7 @@ go build -o OpenSustain ./cmd/OpenSustain
 
 If `--out` is omitted, reports are automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
 
-> **Note:** The `--token` flag is required for org scanning. The token needs `read:org` and `repo` scopes.
+> **Note:** For org scanning, use either `--token` (PAT) or `--app-id`/`--private-key-path` (GitHub App). GitHub App authentication provides significantly higher rate limits (5,000/hour vs 60/hour).
 
 ---
 
