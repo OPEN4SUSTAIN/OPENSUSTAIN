@@ -47,6 +47,19 @@ go build -o OpenSustain ./cmd/OpenSustain
   --token "$GITHUB_TOKEN"
 ```
 
+**Rate Limiting Optimization** (for large organizations):
+
+```bash
+# Skip response time entirely (max API savings)
+./OpenSustain scan org --org my-github-org --days 90 --skip-response-time --token "$GITHUB_TOKEN"
+
+# Sample 20% of issues for response time
+./OpenSustain scan org --org my-github-org --days 90 --sample-rate 0.2 --token "$GITHUB_TOKEN"
+
+# Only fetch response times for recent issues
+./OpenSustain scan org --org my-github-org --days 90 --recent-only --token "$GITHUB_TOKEN"
+```
+
 If `--out` is omitted, reports are automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
 
 > **Note:** The `--token` flag is required for org scanning. The token needs `read:org` and `repo` scopes.

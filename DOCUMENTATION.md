@@ -37,6 +37,9 @@ Scans a repository to generate a maintainer load report in either JSON or Markdo
 - `--local`: Optional flag to enable deep analysis using local git history. Use this when scanning a local repository path.
 - `--mode`: Optional scan mode. Use `remote` for GitHub API-only scans or `deep` for local git analysis.
 - `--token`: GitHub Personal Access Token (PAT). Used to authenticate with the GitHub API to pull Issue and PR statistics and to run remote GitHub-only scans.
+- `--skip-response-time`: Skip response time fetching to reduce GitHub API calls. Useful for large backlogs or rate-limited scenarios.
+- `--sample-rate`: Sample rate for response time fetching (0.0-1.0, default 1.0 = all). Reduces API calls by only fetching response times for a percentage of issues.
+- `--recent-only`: Only fetch response times for issues within the scan window. Eliminates API calls for stale issues.
 
 **Modes:**
 - **Remote mode (default):** For remote owner/repo values, OpenSustain uses GitHub APIs only. No local repository clone is required.
@@ -57,6 +60,9 @@ Scans an entire GitHub organization and aggregates metrics across active reposit
 - `--format`: The output format of the report. Must be `'md'` or `'json'`. Defaults to `md`.
 - `--out`: Output file path. If omitted, the report is automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
 - `--token`: GitHub token for API access. Required for organization scans.
+- `--skip-response-time`: Skip response time fetching to reduce GitHub API calls. Useful for large backlogs or rate-limited scenarios.
+- `--sample-rate`: Sample rate for response time fetching (0.0-1.0, default 1.0 = all). Reduces API calls by only fetching response times for a percentage of issues.
+- `--recent-only`: Only fetch response times for issues within the scan window. Eliminates API calls for stale issues.
 
 ---
 
@@ -92,6 +98,19 @@ To scan all active repositories in a GitHub organization and generate an aggrega
 
 ```bash
 ./OpenSustain scan org --org my-github-org --days 90 --format md --token "$GITHUB_TOKEN"
+```
+
+To reduce GitHub API calls for large organizations:
+
+```bash
+# Skip response time entirely (max API savings)
+./OpenSustain scan org --org my-github-org --days 90 --skip-response-time --token "$GITHUB_TOKEN"
+
+# Sample 20% of issues for response time
+./OpenSustain scan org --org my-github-org --days 90 --sample-rate 0.2 --token "$GITHUB_TOKEN"
+
+# Only fetch response times for recent issues
+./OpenSustain scan org --org my-github-org --days 90 --recent-only --token "$GITHUB_TOKEN"
 ```
 
 If `--out` is omitted, the report is automatically saved to `reports/org-reports/{org-name}-{timestamp}.{format}`.
