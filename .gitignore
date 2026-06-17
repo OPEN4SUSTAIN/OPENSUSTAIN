@@ -27,9 +27,9 @@ go.work.sum
 .DS_Store
 
 # Internal documentation (not for open source)
-docs/
 Summary/
 
 # Generated reports
 reports/
 
+FEATURES.md
