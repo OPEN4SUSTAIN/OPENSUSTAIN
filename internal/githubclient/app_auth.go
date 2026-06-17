@@ -4,9 +4,9 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -21,7 +21,7 @@ type AppAuth struct {
 
 // NewAppAuth creates a new AppAuth instance
 func NewAppAuth(appID int64, privateKeyPath string) (*AppAuth, error) {
-	privateKeyBytes, err := ioutil.ReadFile(privateKeyPath)
+	privateKeyBytes, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key: %w", err)
 	}
