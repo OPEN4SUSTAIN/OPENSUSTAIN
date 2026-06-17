@@ -1,5 +1,6 @@
 title: OpenSustain
 description: Open source sustainability and maintainer-load analysis tool
+baseurl: /OPENSUSTAIN
 github:
   repository_url: https://github.com/Demiserular/OPENSUSTAIN
   owner_name: Demiserular
