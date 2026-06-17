@@ -193,6 +193,8 @@ func scanOrgCmd() {
 	format := scanOrgFlags.String("format", "md", "Output format: 'json' or 'md'")
 	out := scanOrgFlags.String("out", "", "Output file path (default is stdout)")
 	token := scanOrgFlags.String("token", "", "GitHub token for API access (optional)")
+	appID := scanOrgFlags.Int64("app-id", 0, "GitHub App ID for App authentication (higher rate limits)")
+	privateKeyPath := scanOrgFlags.String("private-key-path", "", "Path to GitHub App private key PEM file")
 	busFactorWeight := scanOrgFlags.Float64("bus-factor-weight", 30, "Weight for bus factor risk (default: 30)")
 	backlogAgeWeight := scanOrgFlags.Float64("backlog-age-weight", 30, "Weight for backlog age (default: 30)")
 	commitActivityWeight := scanOrgFlags.Float64("commit-activity-weight", 20, "Weight for commit activity (default: 20)")
@@ -224,6 +226,13 @@ func scanOrgCmd() {
 		os.Exit(1)
 	}
 
+	// Validate app authentication flags
+	if (*appID > 0 && *privateKeyPath == "") || (*appID == 0 && *privateKeyPath != "") {
+		fmt.Fprintf(os.Stderr, "Error: both --app-id and --private-key-path must be provided together for GitHub App authentication.\n")
+		scanOrgFlags.Usage()
+		os.Exit(1)
+	}
+
 	log.Printf("Starting org scan for: %s (window: %d days)", *org, *days)
 
 	weights := metrics.ScoringWeights{
@@ -232,7 +241,7 @@ func scanOrgCmd() {
 		CommitActivity: *commitActivityWeight,
 		ResponseTime:   *responseTimeWeight,
 	}
-	orgReport, err := orgscan.ScanOrg(*org, *days, *token, weights, *skipResponseTime, *sampleRate, *recentOnly)
+	orgReport, err := orgscan.ScanOrg(*org, *days, *token, *appID, *privateKeyPath, weights, *skipResponseTime, *sampleRate, *recentOnly)
 	if err != nil {
 		log.Fatalf("Error scanning org: %v", err)
 	}

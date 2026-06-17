@@ -31,12 +31,39 @@ type OrgMetricsReport struct {
 // ScanOrg enumerates the org's repositories, filters by recent activity,
 // runs existing repo-scan logic on each, computes sustainability scores,
 // detects high-risk repos, and returns an OrgMetricsReport.
-func ScanOrg(org string, days int, token string, weights metrics.ScoringWeights, skipResponseTime bool, sampleRate float64, recentOnly bool) (*OrgMetricsReport, error) {
-	if token == "" {
-		return nil, fmt.Errorf("--token is required for org scanning")
+func ScanOrg(org string, days int, token string, appID int64, privateKeyPath string, weights metrics.ScoringWeights, skipResponseTime bool, sampleRate float64, recentOnly bool) (*OrgMetricsReport, error) {
+	var client *githubclient.Client
+	var err error
+
+	// Use GitHub App authentication if provided
+	if appID > 0 && privateKeyPath != "" {
+		log.Printf("Using GitHub App authentication (App ID: %d)", appID)
+		appAuth, err := githubclient.NewAppAuth(appID, privateKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize GitHub App auth: %w", err)
+		}
+
+		// Get installation for the organization
+		installation, err := appAuth.GetInstallationByOrg(org)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get installation for org %s: %w", org, err)
+		}
+
+		// Exchange JWT for installation token
+		tokenResp, err := appAuth.GetInstallationToken(installation.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get installation token: %w", err)
+		}
+
+		log.Printf("Successfully obtained installation token (expires at: %s)", tokenResp.ExpiresAt.Format("2006-01-02 15:04:05"))
+		client = githubclient.NewClient(tokenResp.Token)
+	} else if token != "" {
+		log.Printf("Using PAT authentication")
+		client = githubclient.NewClient(token)
+	} else {
+		return nil, fmt.Errorf("--token or --app-id/--private-key-path is required for org scanning")
 	}
 
-	client := githubclient.NewClient(token)
 	ctx := context.Background()
 
 	log.Printf("Fetching repositories for org: %s", org)
