@@ -89,6 +89,9 @@ func scanRepoCmd() {
 	backlogAgeWeight := scanRepoFlags.Float64("backlog-age-weight", 30, "Weight for backlog age (default: 30)")
 	commitActivityWeight := scanRepoFlags.Float64("commit-activity-weight", 20, "Weight for commit activity (default: 20)")
 	responseTimeWeight := scanRepoFlags.Float64("response-time-weight", 20, "Weight for response time (default: 20)")
+	skipResponseTime := scanRepoFlags.Bool("skip-response-time", false, "Skip response time fetching to reduce API calls")
+	sampleRate := scanRepoFlags.Float64("sample-rate", 1.0, "Sample rate for response time fetching (0.0-1.0, default 1.0 = all)")
+	recentOnly := scanRepoFlags.Bool("recent-only", false, "Only fetch response times for issues within the scan window")
 
 	if err := scanRepoFlags.Parse(os.Args[3:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -109,6 +112,12 @@ func scanRepoCmd() {
 
 	if !strings.EqualFold(*mode, "remote") && !strings.EqualFold(*mode, "deep") {
 		fmt.Fprintf(os.Stderr, "Error: invalid mode '%s'. Must be 'remote' or 'deep'.\n", *mode)
+		scanRepoFlags.Usage()
+		os.Exit(1)
+	}
+
+	if *sampleRate < 0 || *sampleRate > 1 {
+		fmt.Fprintf(os.Stderr, "Error: invalid sample-rate '%f'. Must be between 0.0 and 1.0.\n", *sampleRate)
 		scanRepoFlags.Usage()
 		os.Exit(1)
 	}
@@ -137,7 +146,7 @@ func scanRepoCmd() {
 	var ghStats *githubclient.GitHubStats
 	if *token != "" {
 		client := githubclient.NewClient(*token)
-		ghStats, err = client.FetchStats(context.Background(), *repo, *days)
+		ghStats, err = client.FetchStats(context.Background(), *repo, *days, *skipResponseTime, *sampleRate, *recentOnly)
 		if err != nil {
 			log.Printf("Warning: GitHub API ingestion failed: %v", err)
 		} else {
@@ -188,6 +197,9 @@ func scanOrgCmd() {
 	backlogAgeWeight := scanOrgFlags.Float64("backlog-age-weight", 30, "Weight for backlog age (default: 30)")
 	commitActivityWeight := scanOrgFlags.Float64("commit-activity-weight", 20, "Weight for commit activity (default: 20)")
 	responseTimeWeight := scanOrgFlags.Float64("response-time-weight", 20, "Weight for response time (default: 20)")
+	skipResponseTime := scanOrgFlags.Bool("skip-response-time", false, "Skip response time fetching to reduce API calls")
+	sampleRate := scanOrgFlags.Float64("sample-rate", 1.0, "Sample rate for response time fetching (0.0-1.0, default 1.0 = all)")
+	recentOnly := scanOrgFlags.Bool("recent-only", false, "Only fetch response times for issues within the scan window")
 
 	if err := scanOrgFlags.Parse(os.Args[3:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -206,6 +218,12 @@ func scanOrgCmd() {
 		os.Exit(1)
 	}
 
+	if *sampleRate < 0 || *sampleRate > 1 {
+		fmt.Fprintf(os.Stderr, "Error: invalid sample-rate '%f'. Must be between 0.0 and 1.0.\n", *sampleRate)
+		scanOrgFlags.Usage()
+		os.Exit(1)
+	}
+
 	log.Printf("Starting org scan for: %s (window: %d days)", *org, *days)
 
 	weights := metrics.ScoringWeights{
@@ -214,7 +232,7 @@ func scanOrgCmd() {
 		CommitActivity: *commitActivityWeight,
 		ResponseTime:   *responseTimeWeight,
 	}
-	orgReport, err := orgscan.ScanOrg(*org, *days, *token, weights)
+	orgReport, err := orgscan.ScanOrg(*org, *days, *token, weights, *skipResponseTime, *sampleRate, *recentOnly)
 	if err != nil {
 		log.Fatalf("Error scanning org: %v", err)
 	}

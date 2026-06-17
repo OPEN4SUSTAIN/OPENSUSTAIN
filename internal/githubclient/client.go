@@ -141,7 +141,7 @@ type Repo struct {
 }
 
 // FetchStats queries the GitHub API for commits, issues, and PRs in the given owner/repo.
-func (c *Client) FetchStats(ctx context.Context, ownerRepo string, days int) (*GitHubStats, error) {
+func (c *Client) FetchStats(ctx context.Context, ownerRepo string, days int, skipResponseTime bool, sampleRate float64, recentOnly bool) (*GitHubStats, error) {
 	if c.Token == "" {
 		// Gracefully skip if no token is provided
 		return nil, nil
@@ -157,7 +157,7 @@ func (c *Client) FetchStats(ctx context.Context, ownerRepo string, days int) (*G
 	stats.UniqueContributors = commitStats.UniqueContributors
 	stats.TopContributorShare = commitStats.TopContributorShare
 
-	issueStats, err := c.fetchIssueStats(ctx, ownerRepo)
+	issueStats, err := c.fetchIssueStats(ctx, ownerRepo, days, skipResponseTime, sampleRate, recentOnly)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch issues: %w", err)
 	}
@@ -284,7 +284,7 @@ type issueStats struct {
 	PRResponseTimes    []time.Duration
 }
 
-func (c *Client) fetchIssueStats(ctx context.Context, ownerRepo string) (*issueStats, error) {
+func (c *Client) fetchIssueStats(ctx context.Context, ownerRepo string, days int, skipResponseTime bool, sampleRate float64, recentOnly bool) (*issueStats, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=open&per_page=100", ownerRepo)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -321,6 +321,8 @@ func (c *Client) fetchIssueStats(ctx context.Context, ownerRepo string) (*issueS
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5)
 
+	cutoff := time.Now().AddDate(0, 0, -days)
+
 	for _, issue := range issues {
 		wg.Add(1)
 		go func(is Issue) {
@@ -336,6 +338,21 @@ func (c *Client) fetchIssueStats(ctx context.Context, ownerRepo string) (*issueS
 			}
 			stats.IssueCreationDates = append(stats.IssueCreationDates, is.CreatedAt)
 			mu.Unlock()
+
+			// Skip response time fetching if flag is set
+			if skipResponseTime {
+				return
+			}
+
+			// Apply sampling: only fetch response time for a percentage of issues
+			if rand.Float64() > sampleRate {
+				return
+			}
+
+			// Apply recent-only filter: only fetch response time for issues within the scan window
+			if recentOnly && is.CreatedAt.Before(cutoff) {
+				return
+			}
 
 			duration, err := c.fetchFirstResponseTime(ctx, ownerRepo, is.Number, is.CreatedAt)
 			if err == nil && duration != nil {

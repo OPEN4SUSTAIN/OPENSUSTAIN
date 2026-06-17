@@ -31,7 +31,7 @@ type OrgMetricsReport struct {
 // ScanOrg enumerates the org's repositories, filters by recent activity,
 // runs existing repo-scan logic on each, computes sustainability scores,
 // detects high-risk repos, and returns an OrgMetricsReport.
-func ScanOrg(org string, days int, token string, weights metrics.ScoringWeights) (*OrgMetricsReport, error) {
+func ScanOrg(org string, days int, token string, weights metrics.ScoringWeights, skipResponseTime bool, sampleRate float64, recentOnly bool) (*OrgMetricsReport, error) {
 	if token == "" {
 		return nil, fmt.Errorf("--token is required for org scanning")
 	}
@@ -64,7 +64,7 @@ func ScanOrg(org string, days int, token string, weights metrics.ScoringWeights)
 		log.Printf("Scanning repo [%d/%d]: %s", i+1, totalRepos, repo.FullName)
 
 		// Remote org scan uses GitHub API only.
-		ghStats, ghErr := client.FetchStats(ctx, repo.FullName, days)
+		ghStats, ghErr := client.FetchStats(ctx, repo.FullName, days, skipResponseTime, sampleRate, recentOnly)
 		if ghErr != nil {
 			log.Printf("Warning: GitHub API failed for %s: %v", repo.FullName, ghErr)
 		}
