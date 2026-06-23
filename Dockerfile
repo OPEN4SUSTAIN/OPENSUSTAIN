@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o /out/OpenSustain ./cmd/OpenSustain
 
 # ── Stage 2: Minimal runtime ──────────────────────────────────────────────────
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:latest
 
 COPY --from=builder /out/OpenSustain /OpenSustain
 
