@@ -1,9 +1,9 @@
 # OpenSustain Maintainer Load Report
 
 ## Activity Metrics
-- **Total Commits:** 22
-- **Unique Contributors:** 2
-- **Top Contributor Share:** 95.45%
+- **Total Commits:** 23
+- **Unique Contributors:** 3
+- **Top Contributor Share:** 91.30%
 
 ## GitHub Backlog
 - **Open Issues:** 0
